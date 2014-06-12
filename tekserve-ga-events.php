@@ -3,7 +3,7 @@
  * Plugin Name: Tekserve Google Analytics Events
  * Plugin URI: https://github.com/bangerkuwranger
  * Description: Allows you to set certain Google Analytics events to be triggered by a selector.
- * Version: 1.0
+ * Version: 1.1
  * Author: Chad A. Carino
  * Author URI: http://www.chadacarino.com
  * License: MIT
@@ -55,6 +55,8 @@ function tekserve_ga_event_custom_fields() {
 
 // Retrieve current details based on gaevent ID
 function display_tekserve_ga_event_meta_box( $gaevent ) {
+	wp_nonce_field( 'tekserve_ga_event_meta_box', 'tekserve_gaevent_nonce' );
+	$tekserve_gaevent_handler = esc_html( get_post_meta( $gaevent->ID, 'tekserve_gaevent_handler', true ) );
     $tekserve_gaevent_selector = esc_html( get_post_meta( $gaevent->ID, 'tekserve_gaevent_selector', true ) );
 	$tekserve_gaevent_category = esc_html( get_post_meta( $gaevent->ID, 'tekserve_gaevent_category', true ) );
 	$tekserve_gaevent_action = esc_html( get_post_meta( $gaevent->ID, 'tekserve_gaevent_action', true ) );
@@ -62,6 +64,15 @@ function display_tekserve_ga_event_meta_box( $gaevent ) {
 	$tekserve_gaevent_value = intval( get_post_meta( $gaevent->ID, 'tekserve_gaevent_value', true ) );
 	?>
     <table>
+    	<tr>
+            <td style="width: 100%"><h2>Event Trigger Type</h2><p>Select whether event will be triggered by clicking object, submitting a form, or moving the cursor over an object</p>
+            <select name="tekserve_gaevent_handler">
+				<option value="click" <?php selected( $tekserve_gaevent_handler, 'click' ); ?>>Click</option>
+				<option value="submit" <?php selected( $tekserve_gaevent_handler, 'submit' ); ?>>Submit</option>
+				<option value="mouseover" <?php selected( $tekserve_gaevent_handler, 'mouseover' ); ?>>Mouse Over</option>
+			</select></td>
+            <td>&nbsp;</td>
+		</tr>
         <tr>
             <td style="width: 100%"><h2>Selector<h2><p>Required. jQuery style selector for the element on the page that you want to trigger this event. No quotes needed. See <a href="http://api.jquery.com/category/selectors/" target="_blank">jQuery documentation</a> for more info.</p></td>
         </tr>
@@ -99,9 +110,22 @@ function display_tekserve_ga_event_meta_box( $gaevent ) {
 //store custom field data
 add_action( 'save_post', 'save_ga_event_custom_fields', 5, 2 );
 function save_ga_event_custom_fields( $gaevent_id, $gaevent ) {
-    // Check post type for 'tekserve_testimonial'
+	//check nonce
+	if ( ! isset( $_POST['tekserve_gaevent_nonce'] ) ) {
+    	return $gaevent_id;
+    }
+    $nonce = $_POST['tekserve_gaevent_nonce'];
+	if ( ! wp_verify_nonce( $nonce, 'tekserve_ga_event_meta_box' ) )
+	  return $gaevent_id;
+	  // If this is an autosave, our form has not been submitted, so we don't want to do anything.
+	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) 
+	  return $gaevent_id;
+    // Check post type for 'gaevent'
     if ( $gaevent->post_type == 'gaevent' ) {
         // Store data in post meta table if present in post data
+        if ( isset( $_POST['tekserve_gaevent_handler'] ) ) {
+            update_post_meta( $gaevent_id, 'tekserve_gaevent_handler', $_REQUEST['tekserve_gaevent_handler'] );
+        }
         if ( isset( $_POST['tekserve_gaevent_selector'] ) && $_POST['tekserve_gaevent_selector'] != '' ) {
             update_post_meta( $gaevent_id, 'tekserve_gaevent_selector', sanitize_text_field( $_REQUEST['tekserve_gaevent_selector'] ) );
         }
@@ -120,7 +144,7 @@ function save_ga_event_custom_fields( $gaevent_id, $gaevent ) {
     }
 }
 
-//set title to quote+name+organization+id
+//set title to Selector + Handler + Category + Action + Label
 function tekserve_ga_event_set_title ($post_id, $post_content) {
     if ( $post_id == null || empty($_POST) )
         return;
@@ -137,7 +161,21 @@ function tekserve_ga_event_set_title ($post_id, $post_content) {
 
     if ( $_POST['tekserve_gaevent_selector']!='' && $_POST['tekserve_gaevent_category']!='' && $_POST['tekserve_gaevent_action']!='' ) {
         global $wpdb;
-        $title = 'Click on "' . $_POST['tekserve_gaevent_selector'] . '" triggers event ' . $_POST['tekserve_gaevent_category'] . ' - ' . $_POST['tekserve_gaevent_action'];
+        $title = '';
+        if( $_POST['tekserve_gaevent_handler'] == 'mouseover' ) {
+        	$title .= 'When cursor is over "';
+        }
+        elseif( $_POST['tekserve_gaevent_handler'] == 'submit' ) {
+        	$title .= 'When submitting the form "';
+        }
+        else {
+        	$title .= 'After user clicks "';
+        }
+        $title .= $_POST['tekserve_gaevent_selector'] . '", trigger event [ ' . $_POST['tekserve_gaevent_category'] . ' - ' . $_POST['tekserve_gaevent_action'];
+        if( $_POST['tekserve_gaevent_label'] ) {
+        	$title .= ' - ' . $_POST['tekserve_gaevent_selector'];
+        }
+        $title .= ' ]';
         $where = array( 'ID' => $post_id );
         $wpdb->update( $wpdb->posts, array( 'post_title' => $title ), $where );
     }
@@ -149,13 +187,15 @@ function tekserve_ga_event_script() {
 	wp_register_script( 'ga_events', plugins_url().'/tekserve-ga-events/js/ga-events.js' );
 	$args = array(
 		'post_type'        => 'gaevent',
-		'post_status'      => 'publish'
+		'post_status'      => 'publish',
+		'numberposts'      => -1
 	);
 	$ga_events = get_posts($args);
 	$ga_events_array = array();
 	foreach( $ga_events as $key=>$ga_event ) {
 		$ga_events_array[$key] = array(
 			'selector'	=> esc_html( get_post_meta( $ga_event->ID, 'tekserve_gaevent_selector', true ) ),
+			'handler'	=> esc_html( get_post_meta( $ga_event->ID, 'tekserve_gaevent_handler', true ) ),
 			'category'	=> esc_html( get_post_meta( $ga_event->ID, 'tekserve_gaevent_category', true ) ),
 			'action'	=> esc_html( get_post_meta( $ga_event->ID, 'tekserve_gaevent_action', true ) ),
 			'label'	=> esc_html( get_post_meta( $ga_event->ID, 'tekserve_gaevent_label', true ) ),
