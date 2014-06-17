@@ -4,26 +4,56 @@ jQuery(document).ready(function($){
 			if($(gaevents[i]['selector']).length) {
 				var label = '';
 				if (gaevents[i]['label']) {
-					label = ', ' + gaevents[i]['label'];
+					label = gaevents[i]['label'];
 				}
 				var value = '';
 				if (gaevents[i]['value'] != 0) {
-					value = ', ' + parseInt(gaevents[i]['value']);
+					value = parseInt(gaevents[i]['value']);
 				}
-				var gaevent = gaevents[i]['category'] + ', ' + gaevents[i]['action'] + label + value;
+				var gamethod = 'send';
+				var gatype = 'event';
+				var gacategory = gaevents[i]['category'];
+				var gaaction = gaevents[i]['action'];
+				
 				if ( gaevents[i]['handler'] == 'click' ){
 					$(gaevents[i]['selector']).click(function(){
-						ga(['send', 'event', gaevent]);
+						if(value != '') {
+							ga(gamethod, gatype, gacategory, gaaction, label, value);
+						}
+						else if(label != '') {
+							ga(gamethod, gatype, gacategory, gaaction, label);
+						}
+						else {
+							ga(gamethod, gatype, gacategory, gaaction);
+						}
 					});
 				}
 				if ( gaevents[i]['handler'] == 'submit' ){
 					$(gaevents[i]['selector']).submit(function(){
-						ga(['send', 'event', gaevent]);
+						$(gaevents[i]['selector']).click(function(){
+						if(value != '') {
+							ga(gamethod, gatype, gacategory, gaaction, label, value);
+						}
+						else if(label != '') {
+							ga(gamethod, gatype, gacategory, gaaction, label);
+						}
+						else {
+							ga(gamethod, gatype, gacategory, gaaction);
+						}
 					});
 				}
 				if ( gaevents[i]['handler'] == 'mouseover' ){
 					$(gaevents[i]['selector']).mouseover(function(){
-						ga(['send', 'event', gaevent]);
+						$(gaevents[i]['selector']).click(function(){
+						if(value != '') {
+							ga(gamethod, gatype, gacategory, gaaction, label, value);
+						}
+						else if(label != '') {
+							ga(gamethod, gatype, gacategory, gaaction, label);
+						}
+						else {
+							ga(gamethod, gatype, gacategory, gaaction);
+						}
 					});
 				}
 			}
