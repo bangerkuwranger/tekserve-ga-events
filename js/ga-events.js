@@ -30,7 +30,6 @@ jQuery(document).ready(function($){
 				}
 				if ( gaevents[i]['handler'] == 'submit' ){
 					$(gaevents[i]['selector']).submit(function(){
-						$(gaevents[i]['selector']).click(function(){
 						if(value != '') {
 							ga(gamethod, gatype, gacategory, gaaction, label, value);
 						}
@@ -44,7 +43,6 @@ jQuery(document).ready(function($){
 				}
 				if ( gaevents[i]['handler'] == 'mouseover' ){
 					$(gaevents[i]['selector']).mouseover(function(){
-						$(gaevents[i]['selector']).click(function(){
 						if(value != '') {
 							ga(gamethod, gatype, gacategory, gaaction, label, value);
 						}
