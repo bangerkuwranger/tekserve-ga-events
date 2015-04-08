@@ -23,6 +23,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 //create custom post type
 add_action( 'init', 'create_post_type_ga_event' );
 function create_post_type_ga_event() {
+
 	register_post_type( 'gaevent',
 		array(
 			'labels' => array(
@@ -45,16 +46,26 @@ function create_post_type_ga_event() {
             'supports' => array( '' ),
 		)
 	);
-}
+
+}	//end create_post_type_ga_event()
+
+
+
 
 //create custom fields for gaevent
 add_action( 'admin_init', 'tekserve_ga_event_custom_fields' );
 function tekserve_ga_event_custom_fields() {
+
     add_meta_box( 'tekserve_ga_event_meta_box', 'Google Analytics Event', 'display_tekserve_ga_event_meta_box', 'gaevent', 'normal', 'high' );
-}
+
+}	//end tekserve_ga_event_custom_fields()
+
+
+
 
 // Retrieve current details based on gaevent ID
 function display_tekserve_ga_event_meta_box( $gaevent ) {
+
 	wp_nonce_field( 'tekserve_ga_event_meta_box', 'tekserve_gaevent_nonce' );
 	$tekserve_gaevent_handler = esc_html( get_post_meta( $gaevent->ID, 'tekserve_gaevent_handler', true ) );
     $tekserve_gaevent_selector = esc_html( get_post_meta( $gaevent->ID, 'tekserve_gaevent_selector', true ) );
@@ -105,23 +116,37 @@ function display_tekserve_ga_event_meta_box( $gaevent ) {
         </tr>
     </table>
     <?php
-}
+ 
+}	//end display_tekserve_ga_event_meta_box( $gaevent )
+
+
+
 
 //store custom field data
 add_action( 'save_post', 'save_ga_event_custom_fields', 5, 2 );
 function save_ga_event_custom_fields( $gaevent_id, $gaevent ) {
+
 	//check nonce
-	if ( ! isset( $_POST['tekserve_gaevent_nonce'] ) ) {
+	if( ! isset( $_POST['tekserve_gaevent_nonce'] ) ) {
+	
     	return $gaevent_id;
-    }
+    
+    }	//end if( ! isset( $_POST['tekserve_gaevent_nonce'] ) )
     $nonce = $_POST['tekserve_gaevent_nonce'];
-	if ( ! wp_verify_nonce( $nonce, 'tekserve_ga_event_meta_box' ) )
+	if( ! wp_verify_nonce( $nonce, 'tekserve_ga_event_meta_box' ) ) {
+	
 	  return $gaevent_id;
-	  // If this is an autosave, our form has not been submitted, so we don't want to do anything.
-	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) 
+	
+	}	//end if( ! wp_verify_nonce( $nonce, 'tekserve_ga_event_meta_box' ) )
+	// If this is an autosave, our form has not been submitted, so we don't want to do anything.
+	if( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+	
 	  return $gaevent_id;
+    
+    }	//end if( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE )
     // Check post type for 'gaevent'
-    if ( $gaevent->post_type == 'gaevent' ) {
+    if( $gaevent->post_type == 'gaevent' ) {
+    
         // Store data in post meta table if present in post data
         if ( isset( $_POST['tekserve_gaevent_handler'] ) ) {
             update_post_meta( $gaevent_id, 'tekserve_gaevent_handler', $_REQUEST['tekserve_gaevent_handler'] );
@@ -141,11 +166,18 @@ function save_ga_event_custom_fields( $gaevent_id, $gaevent ) {
     	if ( isset( $_POST['tekserve_gaevent_value'] ) && $_POST['tekserve_gaevent_value'] != '' ) {
             update_post_meta( $gaevent_id, 'tekserve_gaevent_value', intval( $_REQUEST['tekserve_gaevent_value'] ) );
     	}
-    }
-}
+    
+    }	//end if( $gaevent->post_type == 'gaevent' )
+
+}	//end save_ga_event_custom_fields( $gaevent_id, $gaevent )
+
+
+
 
 //set title to Selector + Handler + Category + Action + Label
-function tekserve_ga_event_set_title ($post_id, $post_content) {
+add_action('save_post', 'tekserve_ga_event_set_title', 15, 2 );
+function tekserve_ga_event_set_title ( $post_id, $post_content ) {
+
     if ( $post_id == null || empty($_POST) )
         return;
 
@@ -179,8 +211,12 @@ function tekserve_ga_event_set_title ($post_id, $post_content) {
         $where = array( 'ID' => $post_id );
         $wpdb->update( $wpdb->posts, array( 'post_title' => $title ), $where );
     }
-}
-add_action('save_post', 'tekserve_ga_event_set_title', 15, 2 );
+
+}	//end tekserve_ga_event_set_title ( $post_id, $post_content )
+
+
+
+
 
 add_action( 'wp_enqueue_scripts', 'tekserve_ga_event_script' );
 function tekserve_ga_event_script() {
